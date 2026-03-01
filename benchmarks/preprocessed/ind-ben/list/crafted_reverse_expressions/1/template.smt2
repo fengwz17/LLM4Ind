@@ -1,0 +1,20 @@
+(set-logic UFDT)
+
+; datatypes
+(declare-datatypes ((nat 0) (lst 0)) (((zero) (s (s0 nat))) ((nil) (cons (cons0 nat) (cons1 lst)))))
+; datatypes end
+
+; functions declarations
+(declare-fun app (lst lst) lst)
+(declare-fun rev (lst) lst)
+(assert (forall ((r lst)) (= (app nil r) r)))
+(assert (forall ((a nat) (l lst) (r lst)) (= (app (cons a l) r) (cons a (app l r)))))
+(assert (= (rev nil) nil))
+(assert (forall ((x nat) (xs lst)) (= (rev (cons x xs)) (app (rev xs) (cons x nil)))))
+; functions declarations end
+
+; proof goal
+(assert (not (forall ((x lst)) (= (rev (rev x)) x))))
+; proof goal end
+
+(check-sat)
