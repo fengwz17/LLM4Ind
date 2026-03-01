@@ -1,0 +1,21 @@
+(set-logic UFDT)
+
+; datatypes
+(declare-datatypes ((nat 0)) (((zero) (s (s0 nat)))))
+; datatypes end
+
+; functions declarations
+(declare-fun add (nat nat) nat)
+(declare-fun leq (nat nat) Bool)
+(assert (forall ((y nat)) (= (add zero y) y)))
+(assert (forall ((x nat) (y nat)) (= (add (s x) y) (s (add x y)))))
+(assert (forall ((y nat)) (leq zero y)))
+(assert (forall ((x nat)) (not (leq (s x) zero))))
+(assert (forall ((x nat) (y nat)) (= (leq (s x) (s y)) (leq x y))))
+; functions declarations end
+
+; proof goal
+(assert (not (forall ((v0 nat)) (leq (add (add (add v0 (add v0 v0)) v0) v0) (add (add (add (add v0 (add v0 v0)) (add v0 v0)) v0) v0)))))
+; proof goal end
+
+(check-sat)

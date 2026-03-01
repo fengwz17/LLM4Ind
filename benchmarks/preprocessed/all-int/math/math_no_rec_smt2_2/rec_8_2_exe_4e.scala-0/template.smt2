@@ -1,0 +1,17 @@
+(set-logic ALL)
+
+; functions declarations
+(declare-fun a (Int) Int)
+(assert (forall ((n Int)) (=> (<= n 0) (= (a n) 5))))
+(assert (forall ((n Int)) (=> (= n 1) (= (a n) (- 1)))))
+(assert (forall ((n Int)) (=> (> n 1) (= (a n) (a (- n 2)) ))))
+(declare-fun Pow (Int Int) Int)
+(assert (forall ((base Int) (exp Int)) (=> (<= exp 0) (= (Pow base exp) 1))))
+(assert (forall ((base Int) (exp Int)) (=> (> exp 0) (= (Pow base exp) (* base (Pow base (- exp 1)))))))
+; functions declarations end
+
+; proof goal
+(assert (not (forall ((n Int)) (=> (>= n 0) (= (a n) (+ (* 3 (Pow (- 1) n)) 2) ) ))))
+; proof goal end
+
+(check-sat)

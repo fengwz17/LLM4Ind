@@ -1,0 +1,12 @@
+(set-logic UFNIA)
+
+(declare-fun bitLength (Int) Int)
+(assert (forall ((x Int)) (=> (<= x 0) (= (bitLength x) 0))))
+(assert (forall ((x Int)) (=> (> x 0) (= (bitLength x) (+ (bitLength (div x 2)) 1)))))
+
+(declare-fun Pow2 (Int) Int)
+(assert (forall ((x Int)) (=> (<= x 0) (= (Pow2 x) 1))))
+(assert (forall ((x Int)) (=> (> x 0) (= (Pow2 x) (* 2 (Pow2 (- x 1)))))))
+
+(assert (not (forall ((x Int)) (=> (>= x 0) (= (+ x 1) (bitLength (Pow2 x)))))))
+(check-sat)
