@@ -1,50 +1,57 @@
 # ProofMate (LLM4SMT)
 
-使用LLMs辅助带归纳的SMT文件的求解。
+Using LLMs to aid in solving SMT files with induction.
 
-## 使用说明
+## Usage
 
-### 预处理
-- 请先使用preprocess.py处理原始的Benchmark
-    - preprocessed/ 目录下是处理好的
-- 将处理好的准备运行的benchmark放到运行目录
+### Preprocessing
+- Preprocess the raw benchmark with `preprocess.py`
+    - Processed files are placed under the `preprocessed/` directory
+- Put the prepared benchmark in the run directory
 
-### 运行
-- 处理后即可使用Mate.py进行实际的测试
-- 具体过程，假如 int-ben-llm/0911-10mins-llm-vmcai15dt 为运行目录
+### Running
+- After preprocessing, use `Mate.py` to run the tests
+- Example workflow with run directory `test-ben/test-vmcai15dt`:
 
 ```bash
-mkdir int-ben-llm/0911-10mins-llm-vmcai15dt
-cp -r preprocessed/vmcai15-dt int-ben-llm/0911-10mins-llm-vmcai15dt
+mkdir test-ben/test-vmcai15dt
+cp -r preprocessed/vmcai15-dt test-vmcai15dt
 
 # run one case
-python3 Mate_parallel_prompt-adt-ind-0907-0.90.9-10mins.py int-ben-llm/0911-10mins-llm-vmcai15dt/vmcai15-dt/clam/nosg/goal1 template
+python3 Mate.py test-vmcai15dt/clam/nosg/goal1
 
-# run dir
-bash exe-0911-llm-0.9-0.9-10mins-for-example.sh
+# run directory
+bash run_all_benchmarks.sh
 
-# resutls
+# results
 python3 result-llm.py
 ```
 
-
-### 本地参数环境配置
-环境配置：
+### Local environment configuration
+Environment setup:
 ```bash
-    ## 安装 langchain
+    ## Install langchain
     pip install langchain_openai python-dotenv 
-    ## 安装彩色日志
+    ## Install colored logging
     pip install colorlog
 ```
-请在本地新建.env文件
+Create a local `.env` file:
 ```config
 OPENAI_API_KEY=sk-xxx
 DEEPSEEK_API_KEY=sk-xxx
-# 不配置则默认使用GPT-4o
+# If not set, GPT-4o is used by default
 MODEL_TYPE=deepseek
 ```
 
-## 文件说明
-- Mate.py 主程序文件
-- result-llm.py 分析指定文件夹下的日志文件并生成Excel格式的报告
-- preprocessed.py SMT2文件预处理，解析重构、模版生成、批量处理
+## File description
+- **Mate.py** — Main program
+- **result-llm.py** — Analyzes log files in the specified directory and generates an Excel report
+- **preprocessed.py** — SMT2 preprocessing: parsing, refactoring, template generation, and batch processing
+
+## Publication
+
+**Can LLM Aid in Solving Constraints with Inductive Definitions?**
+
+Solving constraints involving inductive (aka recursive) definitions is challenging. State-of-the-art SMT/CHC solvers and first-order logic provers provide only limited support for solving such constraints, especially when they involve, e.g., abstract data types. In this work, we leverage structured prompts to elicit Large Language Models (LLMs) to generate auxiliary lemmas that are necessary for reasoning about these inductive definitions. We further propose a neuro-symbolic approach, which synergistically integrates LLMs with constraint solvers: the LLM iteratively generates conjectures, while the solver checks their validity and usefulness for proving the goal. We evaluate our approach on a diverse benchmark suite comprising constraints originating from algebraic data types and recurrence relations. The experimental results show that our approach can improve the state-of-the-art SMT and CHC solvers, solving considerably more (around 25%) proof tasks involving inductive definitions, demonstrating its efficacy.
+
+**Full version paper:** [https://doi.org/10.48550/arXiv.2603.03668](https://doi.org/10.48550/arXiv.2603.03668)
