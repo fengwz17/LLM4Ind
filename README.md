@@ -2,51 +2,153 @@
 
 Using LLMs to aid in solving SMT files with induction.
 
+## Project Structure
+
+```
+LLM4Ind/
+├── .env                          # 环境变量配置文件（API密钥、模型选择、求解器路径等）
+├── env_config.py                 # 环境配置加载与LLM模型初始化
+├── logger_config.py              # 彩色日志配置
+├── Mate_new.py                   # 核心求解器（CVC5/CVC4 + LLM引理生成）
+├── Mate_new_vampire.py           # 核心求解器（Vampire版本）
+├── cvc5_runner.py                # CVC5/CVC4 多策略并行验证运行器
+├── cvc5_parser.py                # CVC5 输出解析器
+├── vampire_runner.py             # Vampire 验证运行器
+├── run_exp_folder.py             # 批量实验运行器（多进程并行，支持超时控制）
+├── run_exp_folder_vampire.py     # 批量实验运行器（Vampire版本）
+├── run_all_benchmark.sh          # 全量基准测试入口脚本（CVC5/CVC4）
+├── run_all_benchmark_vampire.sh  # 全量基准测试入口脚本（Vampire）
+├── main.py                       # 单任务运行入口
+├── preprocessed.py               # SMT2 预处理：解析、重构、模板生成
+├── kill_cvc_processes.sh         # 清理残留 CVC4/CVC5 进程
+├── kill_vampire_processes.sh     # 清理残留 Vampire 进程
+├── benchmarks/
+│   ├── smtlib2/                  # 原始 SMT-LIB2 基准测试集
+│   │   ├── autoproof/
+│   │   ├── dtt/
+│   │   ├── ind-ben/
+│   │   ├── int/
+│   │   └── vmcai15-dt/
+│   └── preprocessed/             # 预处理后的基准测试集
+│       ├── all-int/
+│       ├── autoproof/
+│       ├── dtt/
+│       ├── ind-ben/
+│       └── vmcai15-dt/
+├── cvc/
+│   └── cvc5-Linux-x86_64-static/
+│       └── bin/cvc5              # CVC5 求解器可执行文件
+└── vampire/
+    └── vampire                   # Vampire 求解器可执行文件
+```
+
 ## Usage
 
-### Preprocessing
-- Preprocess the raw benchmark with `preprocess.py`
-    - Processed files are placed under the `preprocessed/` directory
-- Put the prepared benchmark in the run directory
+### 1. Environment Setup
 
-### Running
-- After preprocessing, use `Mate.py` to run the tests
-- Example workflow with run directory `test-ben/test-vmcai15dt`:
+安装 Python 依赖：
 
 ```bash
-mkdir test-ben/test-vmcai15dt
-cp -r preprocessed/vmcai15-dt test-vmcai15dt
-
-# run one case
-python3 Mate.py test-vmcai15dt/clam/nosg/goal1
-
-# run directory
-bash run_all_benchmarks.sh
-
-# results
-python3 result-llm.py
+pip install langchain_openai python-dotenv colorlog psutil tqdm
 ```
 
-### Local environment configuration
-Environment setup:
-```bash
-    ## Install langchain
-    pip install langchain_openai python-dotenv 
-    ## Install colored logging
-    pip install colorlog
-```
-Create a local `.env` file:
-```config
+### 2. Configuration
+
+在项目根目录创建 `.env` 文件：
+
+```ini
+# === LLM API 密钥 ===
 OPENAI_API_KEY=sk-xxx
 DEEPSEEK_API_KEY=sk-xxx
-# If not set, GPT-4o is used by default
-MODEL_TYPE=deepseek
+QWEN_API_KEY=sk-xxx
+GEMINI_API_KEY=sk-xxx
+
+# === 模型选择 ===
+# 可选值: gpt-4o (默认) | deepseek | qwen | gemini
+MODEL_TYPE=qwen
+
+# === 求解器路径 ===
+# 不设置则使用默认路径
+CVC5_BINARY=./cvc/cvc5-Linux-x86_64-static/bin/cvc5
+CVC4_BINARY=../cvc4
+VAMPIRE_BINARY=./vampire/vampire
+
+# === 网络代理（可选）===
+# HTTP_PROXY=http://127.0.0.1:7890
+# HTTPS_PROXY=http://127.0.0.1:7890
+
+# === 运行参数（可选，以下为默认值）===
+# MAX_ATTEMPTS_PER_PROMPT=3       # 每个 prompt 策略的最大尝试次数
+# DEFAULT_CVC_TIMEOUT=60          # 初始验证超时（秒）
+# RETRY_CVC_TIMEOUT=100           # 重试验证超时（秒）
+# COMBINED_CVC_TIMEOUT=60         # 带引理验证超时（秒）
+# MAX_RECURSION_DEPTH=3           # 最大递归深度
+# TASK_TIMEOUT=1200               # 单个任务总超时（秒）
+# MAX_PARALLEL_TASKS=20           # 最大并行任务数
 ```
 
-## File description
-- **Mate.py** — Main program
-- **result-llm.py** — Analyzes log files in the specified directory and generates an Excel report
-- **preprocessed.py** — SMT2 preprocessing: parsing, refactoring, template generation, and batch processing
+### 3. Preprocessing
+
+用 `preprocessed.py` 对原始 SMT2 基准测试进行预处理：
+
+```bash
+python3 preprocessed.py
+```
+
+预处理后的文件存放在 `benchmarks/preprocessed/` 目录下（现有benchmarks已经处理好了）。
+
+### 4. Running
+
+**批量运行（推荐）：**
+
+通过 `run_all_benchmark.sh` 一键运行所有基准测试集（可以直接在这个脚本里面修改要运行的benchmarks目录，不需要用下面那个run_exp_folder.py）：
+
+```bash
+bash run_all_benchmark.sh
+```
+
+脚本内可修改要运行的数据集列表和日志目录。
+
+**运行指定数据集：**
+
+```bash
+python3 run_exp_folder.py --root-path ./benchmarks/preprocessed/autoproof
+```
+
+支持的命令行参数：
+
+| 参数 | 说明 |
+|------|------|
+| `--root-path` | 预处理后的数据集路径 |
+| `--baseline` | 启用 baseline 模式（仅运行求解器初始验证，不使用 LLM） |
+| `--strategy-mode` | 提示词策略：`default`（默认）/ `zero_shot` / `naive` |
+
+**运行单个任务：**
+
+```bash
+python3 main.py <base_path> <base_name>
+```
+
+### 5. Results
+
+运行结果自动保存至 `result_csv/` 目录，文件名格式为 `results_<timestamp>_<dataset>_<mode>.csv`。
+
+实验运行时会将数据集复制到 `result_files/` 目录下避免污染原始文件。
+
+## Supported Models (不局限下面，自己配置API就行，注意在env_config修改定义配置)
+
+| MODEL_TYPE | Model | Provider |
+|------------|-------|----------|
+| `gpt-4o` (default) | GPT-5 | OpenRouter |
+| `deepseek` | DeepSeek-Chat | DeepSeek API |
+| `qwen` | Qwen3-235B | OpenRouter |
+| `gemini` | Gemini 2.5 Flash | OpenRouter |
+
+## Supported Solvers
+
+- **CVC5** — 支持多策略并行验证（simple / inductive / inductive-no-ematching）
+- **CVC4** — 归纳推理配置
+- **Vampire** — 一阶逻辑定理证明器
 
 ## Publication
 
