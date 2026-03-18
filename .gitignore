@@ -1,3 +1,10 @@
 .env
 运行说明.md
 .DS_Store
+
+# cvc5 静态库（只保留 bin/cvc5 可执行文件）
+cvc/cvc5-Linux-x86_64-static/include/
+cvc/cvc5-Linux-x86_64-static/lib/
+cvc/cvc5-Linux-x86_64-static/licenses/
+cvc/cvc5-Linux-x86_64-static/AUTHORS
+cvc/cvc5-Linux-x86_64-static/COPYING
