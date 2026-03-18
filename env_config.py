@@ -17,7 +17,7 @@ def setup_environment():
     https_proxy = os.getenv('HTTPS_PROXY')
     model_type = os.getenv('MODEL_TYPE', 'gpt-4o')  # 默认为 gpt-4o
     cvc5_binary = os.getenv('CVC5_BINARY', './cvc/cvc5-Linux-x86_64-static/bin/cvc5')  # CVC5二进制文件路径
-    cvc4_binary = os.getenv('CVC4_BINARY', '../cvc4')  # CVC4二进制文件路径
+    cvc4_binary = os.getenv('CVC4_BINARY', './cvc/cvc4_binary/cvc4-1.6-x86_64-linux-opt')  # CVC4二进制文件路径
     vampire_binary = os.getenv('VAMPIRE_BINARY', './vampire/vampire')  # Vampire二进制文件路径
     max_attempts_per_prompt = int(os.getenv('MAX_ATTEMPTS_PER_PROMPT', '3'))  # 每个prompt策略的最大尝试次数
     default_cvc_timeout = int(os.getenv('DEFAULT_CVC_TIMEOUT', '60'))  # 默认CVC5超时时间(初始验证检查)

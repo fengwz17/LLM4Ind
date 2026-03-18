@@ -6,7 +6,7 @@ Using LLMs to aid in solving SMT files with induction.
 
 ```
 LLM4Ind/
-├── .env                          # 环境变量配置文件（API密钥、模型选择、求解器路径等）
+├── .env_template                 # .env 模板文件（参照此文件创建 .env）
 ├── env_config.py                 # 环境配置加载与LLM模型初始化
 ├── logger_config.py              # 彩色日志配置
 ├── Mate_new.py                   # 核心求解器（CVC5/CVC4 + LLM引理生成）
@@ -36,8 +36,10 @@ LLM4Ind/
 │       ├── ind-ben/
 │       └── vmcai15-dt/
 ├── cvc/
-│   └── cvc5-Linux-x86_64-static/
-│       └── bin/cvc5              # CVC5 求解器可执行文件
+│   ├── cvc5-Linux-x86_64-static/
+│   │   └── bin/cvc5              # CVC5 求解器可执行文件
+│   └── cvc4_binary/
+│       └── cvc4-1.6-x86_64-linux-opt  # CVC4 求解器可执行文件
 └── vampire/
     └── vampire                   # Vampire 求解器可执行文件
 ```
@@ -54,38 +56,14 @@ pip install langchain_openai python-dotenv colorlog psutil tqdm
 
 ### 2. Configuration
 
-在项目根目录创建 `.env` 文件：
+复制模板文件并填入自己的 API 密钥和路径：
 
-```ini
-# === LLM API 密钥 ===
-OPENAI_API_KEY=sk-xxx
-DEEPSEEK_API_KEY=sk-xxx
-QWEN_API_KEY=sk-xxx
-GEMINI_API_KEY=sk-xxx
-
-# === 模型选择 ===
-# 可选值: gpt-4o (默认) | deepseek | qwen | gemini
-MODEL_TYPE=qwen
-
-# === 求解器路径 ===
-# 不设置则使用默认路径
-CVC5_BINARY=./cvc/cvc5-Linux-x86_64-static/bin/cvc5
-CVC4_BINARY=../cvc4
-VAMPIRE_BINARY=./vampire/vampire
-
-# === 网络代理（可选）===
-# HTTP_PROXY=http://127.0.0.1:7890
-# HTTPS_PROXY=http://127.0.0.1:7890
-
-# === 运行参数（可选，以下为默认值）===
-# MAX_ATTEMPTS_PER_PROMPT=3       # 每个 prompt 策略的最大尝试次数
-# DEFAULT_CVC_TIMEOUT=60          # 初始验证超时（秒）
-# RETRY_CVC_TIMEOUT=100           # 重试验证超时（秒）
-# COMBINED_CVC_TIMEOUT=60         # 带引理验证超时（秒）
-# MAX_RECURSION_DEPTH=3           # 最大递归深度
-# TASK_TIMEOUT=1200               # 单个任务总超时（秒）
-# MAX_PARALLEL_TASKS=20           # 最大并行任务数
+```bash
+cp .env_template .env
+# 编辑 .env，将 sk-xxxxxxx 替换为实际的 API 密钥
 ```
+
+`.env_template` 中包含了所有可配置项及说明，请参照修改。
 
 ### 3. Preprocessing
 
