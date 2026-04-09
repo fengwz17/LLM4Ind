@@ -14,14 +14,13 @@ echo "日志文件将保存在 $LOG_DIR/ 目录下"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # 定义数据集
-# declare -a datasets=("all-int" "autoproof" "dtt" "ind-ben" "vmcai15-dt")
-# declare -a datasets=("autoproof" "dtt" "ind-ben" "vmcai15-dt")
-declare -a datasets=("leon-test")
+# declare -a datasets=("autoproof" "dtt")
+declare -a datasets=("ind-ben" "vmcai15-dt")
 
 # 串行执行每个命令
 for dataset in "${datasets[@]}"; do
     # 根据数据集名称构建路径
-    path="$SCRIPT_DIR/preprocessed/$dataset"
+    path="$SCRIPT_DIR/benchmarks/preprocessed/$dataset"
     # 为每个数据集生成独立的时间戳
     TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     logfile="$LOG_DIR/${TIMESTAMP}_${dataset}.log"

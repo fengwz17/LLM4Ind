@@ -29,12 +29,13 @@ LLM4Ind/
 │   │   ├── ind-ben/
 │   │   ├── int/
 │   │   └── vmcai15-dt/
-│   └── preprocessed/             # 预处理后的基准测试集
-│       ├── all-int/
-│       ├── autoproof/
-│       ├── dtt/
-│       ├── ind-ben/
-│       └── vmcai15-dt/
+│   ├── preprocessed/             # 预处理后的基准测试集
+│   │   ├── all-int/
+│   │   ├── autoproof/
+│   │   ├── dtt/
+│   │   ├── ind-ben/
+│   │   └── vmcai15-dt/
+│   └── do-not-supported-yet/     # ⚠️ 暂不支持的基准测试集（不在论文覆盖范围内）
 ├── cvc/
 │   ├── cvc5-Linux-x86_64-static/
 │   │   └── bin/cvc5              # CVC5 求解器可执行文件
@@ -74,6 +75,8 @@ python3 preprocessed.py
 ```
 
 预处理后的文件存放在 `benchmarks/preprocessed/` 目录下（现有benchmarks已经处理好了）。
+
+> **⚠️ Note:** The `benchmarks/do-not-supported-yet/` directory contains benchmarks that are **not covered in the paper** and are currently **not supported**. Please do **not** run benchmarks from this directory.
 
 ### 4. Running
 
