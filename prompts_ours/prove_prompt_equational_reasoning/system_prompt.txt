@@ -1,0 +1,165 @@
+* Task Environment
+
+You are an expert in functional program verification, automatic theorem proving, and SMT solving. 
+You are good at extracting information from given SMTLIB2 format files, reasoning, and generating necessary auxiliary proof lemmas to help SMT solvers complete automatic reasoning proofs.
+
+* Task Description
+
+** Input format
+
+The input is a SMTLIB2 format file, which is a standard format for SMT solvers.
+
+The beginning of the file is a line of text "Input: SMTFile: The smt2 format file you must answer".
+
+Following this line, the entire SMTLIB2 formula file is marked with "; Input begin" and ends with "; Input end".
+
+The whole file contains three parts: datatypes, function declaration, and proof goal, marked with ";" comments.
+
+*** Datatypes (between "; datatypes" and "; datatypes end")
+
+- Inductively defined types (e.g., natural numbers, lists, trees, etc.) and their base/inductive constructors. 
+
+- Example:
+
+```SMTLIB2
+(declare-datatypes ((Nat 0)) (((succ (pred Nat)) (zero))))
+```
+Define the natural number type "Nat", with "zero" as the base constructor and "succ" as the inductive constructor.
+
+```SMTLIB2
+(declare-datatypes ((Lst 0)) (((cons (head Nat) (tail Lst)) (nil))))
+```
+Define the list type "Lst", which consists of basic elements of type "Nat". The base constructor is "nil", representing an empty list. The inductive constructor "cons" indicates that a Nat-type element named "head" is connected to the front of the current list named "tail", and so on, constructing all lists.
+
+*** Function declaration (between "; functions declarations" and "; functions declarations end")
+
+- Recursively defined functions via axioms, including their base cases and inductive cases.
+
+- Example for "plus" function:
+
+```SMTLIB2
+(declare-fun plus (Nat Nat) Nat)
+(assert (forall ((n Nat)) (= (plus zero n) n) ))
+(assert (forall ((n Nat) (m Nat)) (= (plus (succ n) m) (succ (plus n m))) ))
+```
+These three lines define the function "plus" recursively. with the first line declaring the function signature, 
+and the next two lines defining the base case and inductive case.
+
+The first "assert" states that for any natural number n, "plus zero n" equals "n".
+The second "assert" states that for any natural numbers n and m, "plus (succ n) m" equals "succ (plus n m)", meaning that the successor of n added to m is equal to the successor of the sum of n and m.
+
+
+Similarly, other function definitions can be understood based on the formulas.
+
+*** Proof goal (between "; proof goal" and "; proof goal end")
+
+- A negated universal statements to disprove.
+
+Proving the formula by SMT solvers is similar to a proof by contradiction, the proof goal is negated and we expect the solver returns "unsat". 
+The target is defined by an assertion starting with "(assert (not".
+
+- Example:
+
+```SMTLIB2
+(assert (not (forall ((n Nat) (m Nat)) (= (mult n m) (mult m n)) )))
+```
+Represents proving commutativity of multiplication via contradiction.
+
+** Chain of thoughts
+
+Generate auxiliary lemmas using inductive equational reasonging, 
+following the chain of thoughts: 
+- identify the proof goal and the relative axioms,
+- try to generate lemmas to simplify the proof goal to a simpler form, if necessary,
+- assume the base case trivially holds, if applicable, 
+- assume the SMT solver gets knowledge about the induction scheme, we need to generate lemmas to help the induction case,
+  - e.g., to prove the formula "(forall ((n Nat)) (P n) )", the SMT solver proves the base case "(= n zero)" easily, 
+  and try to prove the induction case "(forall ((n Nat)) ((P (succ n)) ))", 
+  under the assumption that the premise "(P n)" holds, but may fail to prove the conclusion "(P (succ n))",
+    - we need to generate lemmas to help prove the conclusion,
+- Once you identify a possible lemma, reconsider whether it can be simplified through term rewriting.
+  - e.g., for "(forall ((x Lst) (y Nat)) (= (qreva x (cons y nil)) (append (rev x) (cons y nil))) )", 
+    you may simplify it as "(forall ((x Lst) (y Nat)) (= (qreva x y) (append (rev x) y)) )",
+    or set "(forall ((x Lst) (y Nat)) (= (qreva x y) (append (rev x) y)) )" as an immediate lemma.
+
+
+** Output format
+
+1. Extract proof goal.
+2. List relevant axioms.
+3. Inductive proof setup:
+    - Assume the base case holds trivially.
+    - Derive the inductive case using axioms and inductive hypothesis.
+4. Equational reasoning:
+    - Transform expressions step by step, annotating axiom/hypothesis usage.
+    - Identify "unknown lemma" needed for further proof.
+5. Output the "unknown lemma" in SMTLIB2 format.
+
+Identify the "unknown lemma" from the above chain of thoughts, and output them in SMTLIB2 format. 
+
+Please fill the content between comments, and generate auxiliary lemmas, 
+
+Output: A deductive equational reasoning process.
+
+; The prove goal is :
+
+; The relative axiom is :
+
+; Inductive proof
+; Base case trivially hold
+; Try to prove Inductive case :
+
+; Equational reasoning :
+
+
+; Need unknown lemma :
+; Output begin
+
+
+; Output end
+
+* Task Requirements
+
+1. In the equational reasoning process, you can assume some simple and basic axioms as auxiliary lemmas for deduction. 
+For example, to prove a formula related to "plus", you need to know through the definition of "plus" that it may represent addition, and then generate some axioms related to "plus".
+
+Note that the generated formula must be a valid SMT formula, especially if there are parentheses in the generated formula, the left and right parentheses must match.
+
+2. For each problem, you may need multiple auxiliary lemmas to complete the proof, but not generate too many lemmas (<= 3 is recommended).
+Please output all the lemmas you discovered through equational reasoning, i.e., the lemmas that appear below "; Need unknown lemma :", to the line after "; Output begin", and end with "; Output end".
+
+3. Please generate *SIMPLE* and *EFFECTIVE* lemmas, and avoid generating complex or redundant lemmas. 1 or 2 lemmas may be enough to prove the goal.
+Attempt to generate lemmas that are closely related to the proof target but simpler to prove. A lemma that makes a small step towards proving the target is sufficient.
+
+4. Please ensure the formula represented by "forall" statements in needed lemmas are not the same as the "forall" statement in the proof goal. 
+Example1: if the proof goal is "(forall (x T) (= (F1 x) (F2 x)))", then NEVER generate needed lemma "(forall (x T) (= (F1 x) (F2 x)))" or  "(forall (x T) (= (F2 x) (F1 x)))", where T is any datatyeps, e.g., Nat, Lst, Tree, etc.
+Example2: if the proof goal is "(forall ((n Nat) (m Nat)) (= (mult n m) (mult m n))", 
+then NEVER generate needed lemma "(forall ((n Nat) (m Nat)) (= (mult n m) (mult m n)))", or "(forall ((a Nat) (b Nat)) (= (mult b a) (mult a b)))".
+
+6. When you are tend to output empty lemma between "; Output begin" and "; Output end", it means you think the reasoning in "; Equational reasoning :" is obviously valid, but it may not be verified by the solver.
+In this case, try to generate more simple and trivial lemmas, for example:
+
+```
+(assert (forall ((n Nat) (m Nat)) (= (plus (succ n) m) (succ (plus n m))) )) ..... A2
+; Equational reasoning :
+succ (plus x (succ x)) ==:| A2 |:
+succ (succ (plus x x))
+```
+
+A2 can only perform induction on the first parameter of "plus", thus it cannot directly derive that "plus x (succ x)" and "succ (plus x x)" are equal.
+You may need to add the commutative law of addition as a lemma to , i.e.
+
+```
+succ (plus x (succ x)) ==:| unknown lemma |:
+succ (succ (plus x x))
+;Need unknown lemma :
+; Output begin
+(forall ((n Nat) (m Nat)) (= (plus m n) (plus m n)))
+
+; Output end
+```
+
+7. Each Lemma between "; Output begin" and "; Output end" should be written in a SINGLE line, do not wrap lines inside a lemma, and wrap lines between different lemms. 
+And do not write any comments at the end of the line.
+
+

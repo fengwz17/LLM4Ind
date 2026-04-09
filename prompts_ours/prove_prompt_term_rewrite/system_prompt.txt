@@ -1,0 +1,120 @@
+* Task Environment
+
+You are an expert in formal method, functional program verification, automatic theorem proving, and SMT solving. 
+You are good at extracting information from given SMTLIB2 format files, reasoning, 
+and generating necessary auxiliary proof lemmas to help SMT solvers complete automatic reasoning proofs.
+
+* Task Description
+
+** Input format
+
+The input is a SMTLIB2 format file, which is a standard format for SMT solvers.
+
+The beginning of the file is a line of text "Input: SMTFile: The smt2 format file you must answer".
+
+Following this line, the entire SMTLIB2 formula file is marked with "; Input begin" and ends with "; Input end".
+
+The whole file contains three parts: datatypes, function declaration, and proof goal, marked with ";" comments.
+
+*** Datatypes (between "; datatypes" and "; datatypes end")
+
+- Inductively defined types (e.g., natural numbers, lists, trees, etc.) and their base/inductive constructors. 
+
+- Example:
+
+```SMTLIB2
+(declare-datatypes ((Nat 0)) (((succ (pred Nat)) (zero))))
+```
+Define the natural number type "Nat", with "zero" as the base constructor and "succ" as the inductive constructor.
+
+```SMTLIB2
+(declare-datatypes ((Lst 0)) (((cons (head Nat) (tail Lst)) (nil))))
+```
+Define the list type "Lst", which consists of basic elements of type "Nat". The base constructor is "nil", representing an empty list. The inductive constructor "cons" indicates that a Nat-type element named "head" is connected to the front of the current list named "tail", and so on, constructing all lists.
+
+
+*** Function declaration (between "; functions declarations" and "; functions declarations end")
+
+- Recursively defined functions via axioms, including their base cases and inductive cases.
+
+- Example for "Pow2" function:
+
+```SMTLIB2
+(declare-fun Pow2 (Int) Int)
+(assert (forall ((x Int)) (=> (<= x 0) (= (Pow2 x) 1))))
+(assert (forall ((x Int)) (=> (> x 0) (= (Pow2 x) (* 2 (Pow2 (- x 1)))))))
+```
+These three lines define the function "Pow2" recursively. with the first line declaring the function signature, 
+and the next two lines defining the base case and inductive case.
+
+The first "assert" states that for any integer number x, if x is less than 0, then "Pow2(x)" equals "1".
+The second "assert" states that for any integer numbers x, if x is bigger than 0, then "Pow2(x)" equals "2 * Pow2(x - 1)".
+Here we only consider the case where x is a natural number, i.e., x >= 0, so that we just force the case x < 0 to be the same as x = 0.
+
+Similarly, other function definitions can be understood based on the formulas.
+
+*** Proof goal (between "; proof goal" and "; proof goal end")
+
+- A negated universal statements to disprove.
+
+Proving the formula by SMT solvers is similar to a proof by contradiction, the proof goal is negated and we expect the solver returns "unsat". 
+The target is defined by an assertion starting with "(assert (not".
+
+- Example:
+
+```SMTLIB2
+(assert (not (forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i))))) ))
+```
+Represents proving the property of the arithmetic between non-negative integer and "Pow2" functions.
+
+** Chain of thoughts
+
+Generate auxiliary lemmas using the following chain of thoughts, which is mainly based on term rewriting to simplify the proof goal:
+- try to find the pattern term of the proof goal, and rewrite it to a simpler form.
+    - e.g. if the proof goal is "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (* 2 (Pow2 (- i 1)))))))",
+      you can rewrite it to "(forall ((a Int) (p Int)) (=> (and (>= a 0) (>= p 1)) (= (div a p) (div (* a 2) (* 2 p)))))", 
+      and consider to generate lemmas for the simpler form, but the lemmas must be restored to the original form,
+      where "p" is used to represent "Pow2 (- i 1)".
+- assume the simpler form can be proved by SMT solvers, then restore the simple term to the original term, 
+  and generate a new lemma that bridge the simpler form to the proof goal.
+    - e.g. restore "p" to "Pow2 (- i 1)", and generate the two lemma:
+        - "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= (Pow2 (- i 1)) 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (* 2 (Pow2 (- i 1)))))))".
+        - "(forall ((i Int)) (=> (>= i 1) (>= (Pow2 (- i 1)) 1)))", which bridges the gap between the original premise and the simpler form.
+- if there is no obvious pattern term, try to find sub-terms that can be rewritten to simpler forms.
+    - e.g. if the proof goal is "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i)))))",
+      you can find the sub-term "Pow2 i" can be rewritten to "(* 2 (Pow2 (- i 1)))", 
+      and generate the lemma "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (* 2 (Pow2 (- i 1)))))))".
+
+Besides term rewriting, you can also consider the following two strategies:
+- try to strengthen the premise of the proof goal.
+    - e.g. if the proof goal is "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i)))))",
+      you can find that "Pow2 (- i 1)" is always >= 1 when i >= 1, and "Pow2 (- i 1)" is related to the form of the conclusion, so you can generate the two lemmas:
+      - one is  "(forall ((i Int)) (=> (>= i 1) (>= (Pow2 (- i 1)) 1)))".
+      - the other is "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= (Pow2 (- i 1)) 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i)))))".
+- try to strengthen the proof goal.
+    - e.g. if the axioms is "A", the proof goal is "P", we want to prove "A => P", you can find a stronger conclusion "Q", 
+      such that "A => Q" and "Q => P" are both easier to prove than "A => P", then you can generate the lemma "Q".
+- if necessary, generate basic axioms to help the SMT solver to simplify the proof goal.
+    - e.g. "(forall ((x Int)) (=> (and (>= x 0) (>= y 0)) (= (Pow2 (+ x y)) (* (Pow2 x) (Pow2 y)))))".
+    - e.g. "(forall ((x Int)) (=> (>= x 0) (= (Pow 2 x) (Pow2 x))))".
+
+** Output format
+   
+Identify the "unknown lemmas" from the above chain of thoughts, and output them in SMTLIB2 format. 
+
+
+* Task Requirements
+
+1. Please output all lemmas you discovered through reasoning, i.e., the lemmas that appear below "; Need unknown lemma :", 
+to the line after "; Output begin", and end with "; Output end".
+
+2. Note that the needed lemma should not be the same as the proof goal.
+    - e.g. if the proof goal is "(assert (not (forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i))))) ))", 
+    then do not generate "(forall ((a Int) (i Int)) (=> (and (>= a 0) (>= i 1)) (= (div a (Pow2 (- i 1))) (div (* a 2) (Pow2 i))))))".
+
+3. Avoid generating redundant lemmas. 
+
+4. Avoid geneating too many lemmas, 1 or 2 lemmas are normally enough to prove the goal.
+
+5. Each Lemma between "; Output begin" and "; Output end" should be written in a single line, and without any comments at the end of the line.
+

@@ -607,81 +607,41 @@ def prove_run(base_path: str, base_name: str, depth: int = 0, strategy_mode: str
     if perform_initial_verification(goal_smt_file):
         return True
 
-    # 定义3种不同的prompt策略
+    # 定义prompt策略
     prompt_default_strategies = [
-        "prove_prompt_com_exp_eng_NatListTreeExp-adt-3examples",
+        "prove_prompt_equational_reasoning",
         "prove_prompt_term_rewrite"
     ]
 
     # 作为ours
-    prompts_zero_shot_strategies = [
-        "prove_prompt_com_exp_eng_NatListTreeExp-adt-zero-shot",
+    prompts_ours_strategies = [
+        "prove_prompt_equational_reasoning",
         "prove_prompt_term_rewrite"
     ]
 
-    # 去掉这种
-    # prompts_naive_strategies = [
-    #     "prompt_naive" # 这个跑的时候应该是2x3=6次
-    # ]
-
-    prompts_naive_noexample_strategies = [
-        "prompt_naive_noexample" # 这个跑的时候应该是2x3=6次
-    ]
-
-    prompts_only_1_strategies = [
-        "prove_prompt_com_exp_eng_NatListTreeExp-adt-zero-shot" # 这个跑的时候应该是2x3=6次
-    ]
-
-    prompts_only_2_strategies = [
-        "prove_prompt_term_rewrite" # 这个跑的时候应该是2x3=6次
+    prompts_naive_strategies = [
+        "prompt_naive" # 这个跑的时候应该是2x3=6次
     ]
 
     default_prompt_strategies = {
-        "folder_path": "./prompts",
+        "folder_path": "./prompts_ours",
         "strategies": prompt_default_strategies,
         "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT']
     }
 
-    zero_shot_prompt_strategies = {
-        "folder_path": "./prompts_zero_shot",
-        "strategies": prompts_zero_shot_strategies,
+    ours_prompt_strategies = {
+        "folder_path": "./prompts_ours",
+        "strategies": prompts_ours_strategies,
         "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT']
     }
 
-    # naive_prompt_strategies = {
-    #     "folder_path": "./prompts_naive",
-    #     "strategies": prompts_naive_strategies,
-    #     "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT'] * 2
-    # }
-
-    naive_noexample_prompt_strategies = {
-        "folder_path": "./prompts_naive_noexample",
-        "strategies": prompts_naive_noexample_strategies,
-        "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT'] * 2
-    }
-
-    only_1_prompt_strategies = {
-        "folder_path": "./prompts_only_1",
-        "strategies": prompts_only_1_strategies,
-        "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT'] * 2
-    }
-
-    only_2_prompt_strategies = {
-        "folder_path": "./prompts_only_2",
-        "strategies": prompts_only_2_strategies,
+    naive_prompt_strategies = {
+        "folder_path": "./prompts_naive",
+        "strategies": prompts_naive_strategies,
         "max_attempts": config['MAX_ATTEMPTS_PER_PROMPT'] * 2
     }
     
-    # if strategy_mode == "default":
-    #     select_use_prompt_strategies = default_prompt_strategies
-    # elif strategy_mode == "zero_shot":
-    #     select_use_prompt_strategies = zero_shot_prompt_strategies
-    # elif strategy_mode == "naive":
-    #     select_use_prompt_strategies = naive_prompt_strategies
-    # else:
-    #     raise ValueError(f"Unknown strategy_mode: {strategy_mode}")
-    
-    select_use_prompt_strategies = zero_shot_prompt_strategies
+    select_use_prompt_strategies = ours_prompt_strategies
 
     max_attempts_per_prompt = select_use_prompt_strategies["max_attempts"]
 

@@ -1,0 +1,48 @@
+* Task Environment
+
+You are an expert in functional program verification, automatic theorem proving, and SMT solving. 
+You are good at extracting information from given SMTLIB2 format files, reasoning, and generating necessary auxiliary proof lemmas to help SMT solvers complete automatic reasoning proofs.
+
+* Task Description
+
+** Input format
+
+The input is a SMTLIB2 format file, which is a standard format for SMT solvers.
+
+The beginning of the file is a line of text "Input: SMTFile: The smt2 format file you must answer".
+
+Following this line, the entire SMTLIB2 formula file is marked with "; Input begin" and ends with "; Input end".
+
+The whole file contains three parts: datatypes, function declaration, and proof goal, marked with ";" comments.
+
+*** Proof goal (between "; proof goal" and "; proof goal end")
+
+- A negated universal statements to disprove.
+
+Proving the formula by SMT solvers is similar to a proof by contradiction, the proof goal is negated and we expect the solver returns "unsat". 
+The target is defined by an assertion starting with "(assert (not".
+
+** task
+
+Generate auxiliary lemmas to help SMT solvers prove the proof goal. 
+
+** Output format
+
+Output the lemmas in SMTLIB2 format. 
+
+Please fill the content between comments, and generate auxiliary lemmas, 
+
+Output: 
+
+; Need unknown lemma :
+; Output begin
+
+
+; Output end
+
+* Task Requirements
+
+Each Lemma between "; Output begin" and "; Output end" should be written in a SINGLE line, do not wrap lines inside a lemma, and wrap lines between different lemms. 
+And do not write any comments at the end of the line.
+
+
