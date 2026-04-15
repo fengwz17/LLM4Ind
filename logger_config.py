@@ -2,8 +2,8 @@ import logging
 import colorlog
 
 def setup_colored_logger():
-    """配置彩色日志记录器"""
-    # 配置彩色日志
+    """Configure a colored logger"""
+    # Configure colored logging
     color_formatter = colorlog.ColoredFormatter(
         '%(log_color)s%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
@@ -16,16 +16,16 @@ def setup_colored_logger():
         }
     )
 
-    # 创建并配置日志处理器
+    # Create and configure the log handler
     handler = colorlog.StreamHandler()
     handler.setFormatter(color_formatter)
     logger = colorlog.getLogger()
     logger.addHandler(handler)
-    # 静默非关键日志，保留 CRITICAL
+    # Silence non-critical logs; keep CRITICAL
     logger.setLevel(logging.INFO)
-    # logger.setLevel(logging.DEBUG) # 如果需要查看网络发送信息，可以切换到DEBUG级的Log记录
+    # logger.setLevel(logging.DEBUG) # switch to DEBUG level if you need to see network-send info
 
-    # 清除默认的处理器以避免重复输出
+    # Clear the default handlers to avoid duplicate output
     logger.handlers = [handler]
     
     return logger
