@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Vampire 实验结果统计脚本
-统计每个数据集的unsat数量、平均时间等信息
+Vampire experiment-result statistics script.
+Reports per-dataset unsat counts, average times, etc.
 """
 import csv
 from pathlib import Path
 
 def analyze_csv_file(filepath, dataset_name):
-    """分析单个CSV文件"""
+    """Analyze a single CSV file"""
     path = Path(filepath)
     if not path.exists():
-        print(f"\n文件不存在: {filepath}")
+        print(f"\nFile not found: {filepath}")
         return None
     
     total = 0
@@ -58,7 +58,7 @@ def analyze_csv_file(filepath, dataset_name):
     }
 
 def main():
-    # 获取脚本所在目录
+    # Directory containing this script
     script_dir = Path(__file__).parent
     parent_dir = script_dir.parent
     
@@ -70,7 +70,7 @@ def main():
     ]
     
     print("=" * 70)
-    print("Vampire 实验结果统计（包含平均时间）")
+    print("Vampire experiment-result statistics (includes average times)")
     print("=" * 70)
     
     results = []
@@ -79,16 +79,16 @@ def main():
         if result:
             results.append(result)
             
-            print(f"\n数据集: {result['dataset']}")
-            print(f"  总数: {result['total']}")
-            print(f"  所有 unsat: {result['unsat_all_count']} 个, 平均时间: {result['unsat_all_avg']:.2f}s")
-            print(f"  unsat < 360s: {result['unsat_360_count']} 个, 平均时间: {result['unsat_360_avg']:.2f}s")
-            print(f"  unsat < 1200s: {result['unsat_1200_count']} 个, 平均时间: {result['unsat_1200_avg']:.2f}s")
+            print(f"\nDataset: {result['dataset']}")
+            print(f"  Total: {result['total']}")
+            print(f"  All unsat: {result['unsat_all_count']}, average time: {result['unsat_all_avg']:.2f}s")
+            print(f"  unsat < 360s: {result['unsat_360_count']}, average time: {result['unsat_360_avg']:.2f}s")
+            print(f"  unsat < 1200s: {result['unsat_1200_count']}, average time: {result['unsat_1200_avg']:.2f}s")
     
-    # 总计
+    # Grand total
     if results:
         print("\n" + "=" * 70)
-        print("总计:")
+        print("Grand total:")
         
         total_all = sum(r['total'] for r in results)
         unsat_all_times_all = []
@@ -104,10 +104,10 @@ def main():
         avg_360_total = sum(unsat_360_times_all) / len(unsat_360_times_all) if unsat_360_times_all else 0
         avg_1200_total = sum(unsat_1200_times_all) / len(unsat_1200_times_all) if unsat_1200_times_all else 0
         
-        print(f"  总数: {total_all}")
-        print(f"  所有 unsat: {len(unsat_all_times_all)} 个, 平均时间: {avg_all_total:.2f}s")
-        print(f"  unsat < 360s: {len(unsat_360_times_all)} 个, 平均时间: {avg_360_total:.2f}s")
-        print(f"  unsat < 1200s: {len(unsat_1200_times_all)} 个, 平均时间: {avg_1200_total:.2f}s")
+        print(f"  Total: {total_all}")
+        print(f"  All unsat: {len(unsat_all_times_all)}, average time: {avg_all_total:.2f}s")
+        print(f"  unsat < 360s: {len(unsat_360_times_all)}, average time: {avg_360_total:.2f}s")
+        print(f"  unsat < 1200s: {len(unsat_1200_times_all)}, average time: {avg_1200_total:.2f}s")
         print("=" * 70)
 
 if __name__ == "__main__":

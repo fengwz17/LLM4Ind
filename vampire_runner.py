@@ -6,32 +6,32 @@ import signal
 from pathlib import Path
 from env_config import setup_environment
 
-# 获取配置
+# Load the configuration
 config = setup_environment()
 
 def run_vampire_with_timeout(smt2_path, timeout=60):
     """
-    使用Vampire验证SMT2文件
+    Verify an SMT2 file with Vampire.
     
     Args:
-        smt2_path (str or Path): SMT2文件路径
-        timeout (int): 超时时间（秒），默认60秒
+        smt2_path (str or Path): path to the SMT2 file
+        timeout (int): timeout in seconds, defaults to 60
         
     Returns:
-        bool: 验证成功返回True（unsatisfiable），失败或超时返回False
+        bool: True if the verification succeeds (unsatisfiable); False on failure or timeout.
     """
-    # 从配置中获取Vampire可执行文件路径
+    # Get the path to the Vampire executable from the configuration
     vampire_binary = config.get('VAMPIRE_BINARY')
     if not vampire_binary:
-        logging.error("VAMPIRE_BINARY未在配置中找到")
+        logging.error("VAMPIRE_BINARY not found in the configuration")
         return False
     
-    # 确保smt2_path是Path对象
+    # Ensure smt2_path is a Path object
     if isinstance(smt2_path, str):
         smt2_path = Path(smt2_path)
     
-    # 构建命令，timeout需要在后面加's'
-    # --input_syntax 指定输入语法类型为 smtlib2，文件路径作为最后一个参数
+    # Build the command; the timeout value needs an 's' suffix.
+    # --input_syntax specifies the input-syntax type as smtlib2; the file path is the last argument.
     command = [
         vampire_binary,
         '-t', f'{timeout}s',
@@ -43,89 +43,89 @@ def run_vampire_with_timeout(smt2_path, timeout=60):
     ]
     
     try:
-        logging.debug(f"启动Vampire进程: {' '.join(command)}")
+        logging.debug(f"Starting Vampire process: {' '.join(command)}")
         
-        # 使用进程组来管理子进程，便于清理
+        # Use a process group to manage the child process, making cleanup easier
         proc = subprocess.Popen(
             command,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            preexec_fn=os.setsid  # 创建新的进程组
+            preexec_fn=os.setsid  # create a new process group
         )
         
         start_time = time.time()
         
         try:
-            # 等待进程完成，但设置超时
-            stdout, stderr = proc.communicate(timeout=timeout + 5)  # 多给5秒缓冲
+            # Wait for the process to finish, but apply a timeout
+            stdout, stderr = proc.communicate(timeout=timeout + 5)  # add 5s of buffer
             
             elapsed_time = time.time() - start_time
             
-            # 检查输出，只检查stdout中的结果，忽略stderr中的警告信息
-            # Vampire在证明unsatisfiable时输出中包含"unsatisfiable"或"unsat"
+            # Only inspect stdout for the result; ignore warnings on stderr.
+            # When Vampire proves unsatisfiability, its output contains "unsatisfiable" or "unsat".
             output = stdout.lower().strip()
             
-            # 检查是否包含unsat结果（通常出现在最后）
+            # Check whether the output contains an unsat result (usually at the end)
             if 'unsatisfiable' in output or 'unsat' in output:
-                logging.info(f"Vampire验证成功: unsatisfiable (耗时: {elapsed_time:.2f}秒, 返回码: {proc.returncode})")
+                logging.info(f"Vampire verification succeeded: unsatisfiable (elapsed: {elapsed_time:.2f}s, return code: {proc.returncode})")
                 return True
             else:
-                # 即使返回码为0，如果没有找到unsat，也认为失败
-                logging.debug(f"Vampire未找到unsatisfiable结果 (返回码: {proc.returncode}, 耗时: {elapsed_time:.2f}秒)")
+                # Even if the return code is 0, treat it as failure when no unsat is found
+                logging.debug(f"Vampire did not produce an unsatisfiable result (return code: {proc.returncode}, elapsed: {elapsed_time:.2f}s)")
                 if stdout.strip():
-                    logging.debug(f"Vampire stdout (最后100字符): {stdout.strip()[-100:]}")
+                    logging.debug(f"Vampire stdout (last 100 chars): {stdout.strip()[-100:]}")
                 if stderr.strip():
-                    logging.debug(f"Vampire stderr (前200字符): {stderr.strip()[:200]}")
+                    logging.debug(f"Vampire stderr (first 200 chars): {stderr.strip()[:200]}")
                 return False
                 
         except subprocess.TimeoutExpired:
-            # 超时，终止进程
+            # Timeout: terminate the process
             elapsed_time = time.time() - start_time
-            logging.warning(f"Vampire验证超时 (耗时: {elapsed_time:.2f}秒)")
+            logging.warning(f"Vampire verification timed out (elapsed: {elapsed_time:.2f}s)")
             _cleanup_process(proc)
             return False
             
     except FileNotFoundError:
-        logging.error(f"Vampire可执行文件未找到: {vampire_binary}")
+        logging.error(f"Vampire executable not found: {vampire_binary}")
         return False
     except Exception as e:
-        logging.error(f"启动Vampire进程失败: {e}")
+        logging.error(f"Failed to start the Vampire process: {e}")
         return False
 
 
 def _cleanup_process(proc):
     """
-    清理进程，包括其子进程
+    Clean up a process together with its child processes.
     
     Args:
-        proc: subprocess.Popen对象
+        proc: a subprocess.Popen object
     """
-    if proc.poll() is None:  # 进程仍在运行
+    if proc.poll() is None:  # process is still running
         try:
-            # 首先尝试优雅地终止进程组
+            # First, try to gracefully terminate the process group
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                logging.debug(f"发送SIGTERM到Vampire进程组 (PGID: {os.getpgid(proc.pid)})")
+                logging.debug(f"Sent SIGTERM to the Vampire process group (PGID: {os.getpgid(proc.pid)})")
             except (OSError, ProcessLookupError):
-                # 如果进程组不存在，直接终止进程
+                # If the process group no longer exists, terminate the process directly
                 proc.terminate()
-                logging.debug(f"直接终止Vampire进程 (PID: {proc.pid})")
+                logging.debug(f"Terminated the Vampire process directly (PID: {proc.pid})")
             
-            # 给进程一些时间优雅退出
+            # Give the process some time to exit gracefully
             try:
                 proc.wait(timeout=3)
-                logging.debug(f"已优雅终止Vampire进程")
+                logging.debug(f"Vampire process terminated gracefully")
             except subprocess.TimeoutExpired:
-                # 强制终止进程组
+                # Force-terminate the process group
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                    logging.debug(f"强制终止Vampire进程组")
+                    logging.debug(f"Force-terminated the Vampire process group")
                 except (OSError, ProcessLookupError):
-                    # 如果进程组不存在，直接杀死进程
+                    # If the process group no longer exists, kill the process directly
                     proc.kill()
-                    logging.debug(f"强制终止Vampire进程")
+                    logging.debug(f"Force-terminated the Vampire process")
                 proc.wait()
                 
         except Exception as e:
-            logging.error(f"终止Vampire进程时出错: {e}")
+            logging.error(f"Error while terminating the Vampire process: {e}")
