@@ -3,20 +3,20 @@ import re
 import shutil
 
 def process_files_in_folder(input_folder, output_folder):
-    # 遍历输入文件夹中的所有文件
+    # Iterate over all files in the input folder
     for filename in os.listdir(input_folder):
         if filename.endswith(".smt2"):
             input_file_path = os.path.join(input_folder, filename)
             output_subfolder = os.path.join(output_folder, filename.replace(".smt2", ""))
             
-            # 创建输出子文件夹
+            # Create the output subfolder
             if not os.path.exists(output_subfolder):
                 os.makedirs(output_subfolder)
             
-            # 复制原始文件到输出子文件夹
+            # Copy the original file to the output subfolder
             shutil.copy(input_file_path, os.path.join(output_subfolder, "origin.smt2"))
             
-            # 处理文件并生成template和goals文件
+            # Process the file and generate the template and goals files
             process_smt2_file(input_file_path, output_subfolder)
 
 def process_smt2_file(input_file_path, output_subfolder):
@@ -26,7 +26,7 @@ def process_smt2_file(input_file_path, output_subfolder):
     conjectures = []
     decfuns = []
 
-    # 正则表达式匹配 (assert (not ...)) 形式的行
+    # Regexes matching lines of the form (assert (not ...))
     assert_not_pattern = re.compile(r'\(assert \(not .*\)\)')
     assert_pattern = re.compile(r'\(assert \(.*\)\)')
     datatype_pattern = re.compile(r'\(declare-datatypes \(.*\)\)')
@@ -35,7 +35,7 @@ def process_smt2_file(input_file_path, output_subfolder):
     
     with open(input_file_path, 'r') as infile:
         for line in infile:
-            # 如果匹配到 (assert (not ...)) 形式的行，将其添加到goals列表中
+            # If the line matches (assert (not ...)), add it to the goals list
             if assert_not_pattern.search(line):
                 goals.append(line.strip())
 
@@ -52,7 +52,7 @@ def process_smt2_file(input_file_path, output_subfolder):
             elif "(check-sat)" not in line and "(exit)" not in line:
                 template_lines.append(line)
     
-    # 如果没有识别到goals，打印反馈
+    # If no goals were identified, print a message
     if not goals:
         print(f"No goals found in file: {input_file_path}")
     
@@ -60,22 +60,22 @@ def process_smt2_file(input_file_path, output_subfolder):
     with open(generated_lemms_path, 'w') as generated_lemms:
         generated_lemms.write(";-------------- generated lemmas ---------------\n")
 
-    # 生成template文件
+    # Generate the template file
     template_file_path = os.path.join(output_subfolder, "template.smt2")
     with open(template_file_path, 'w') as template_file:
         template_file.write(";-------------- datatypes ---------------\n")
         # for line in template_lines:
         #     template_file.write(line)
-        # 在 (check-sat) 之前插入 {invalid_lemmas}, {new_lemmas}, {goals} 占位符
+        # Insert {invalid_lemmas}, {new_lemmas}, {goals} placeholders before (check-sat)
         for datatype in datatypes:
             template_file.write(datatype + '\n')
-        template_file.write(";-------------- End of datatypes ---------------\n") 
+        template_file.write(";-------------- End of datatypes ---------------\n")
         template_file.write("\n")
         
         template_file.write(";-------------- conjectures ---------------\n")
         for conjecture in conjectures:
             template_file.write(conjecture + '\n')
-        template_file.write(";-------------- End of conjectures ---------------\n") 
+        template_file.write(";-------------- End of conjectures ---------------\n")
         
         template_file.write("\n")
         template_file.write(";------------------------ Goals to prove -----------------------\n")
@@ -91,7 +91,7 @@ def process_smt2_file(input_file_path, output_subfolder):
         template_file.write("{new_lemmas}\n")
         template_file.write(";---------------------- End of new conjectures ----------------------\n")
     
-    # generate defination files for cvc5 api 
+    # Generate definition files for the cvc5 API
     definitions_file_path = os.path.join(output_subfolder, "definitions.smt2")
     with open(definitions_file_path, 'w') as definitions_file:
         for datatype in datatypes:
@@ -99,25 +99,25 @@ def process_smt2_file(input_file_path, output_subfolder):
         for decfun in decfuns:
             definitions_file.write(decfun + '\n')       
     
-    # # 生成goals文件
+    # # Generate the goals file
     # goals_file_path = os.path.join(output_subfolder, "goals")
     # with open(goals_file_path, 'w') as goals_file:
     #     for goal in goals:
     #         goals_file.write(goal + "\n")
     
-    # # 生成new_lemmas文件（目前为空）
+    # # Generate the new_lemmas file (empty for now)
     # new_lemmas_file_path = os.path.join(output_subfolder, "new_lemmas")
     # with open(new_lemmas_file_path, 'w') as new_lemmas_file:
     #     new_lemmas_file.write("")
 
-    # # 生成invalid_lemmas文件（目前为空）
+    # # Generate the invalid_lemmas file (empty for now)
     # invalid_lemmas_file_path = os.path.join(output_subfolder, "invalid_lemmas")
     # with open(invalid_lemmas_file_path, 'w') as invalid_lemmas_file:
     #     invalid_lemmas_file.write("")
 
 def synthesize_smt2_file(template_path, invalid_lemmas_path, new_lemmas_path, goals_path, output_path):
     """
-    根据模板文件、new_lemmas文件和goals文件合成一个新的smt2文件。
+    Synthesize a new smt2 file from the template file, the new_lemmas file, and the goals file.
     """
     with open(template_path, 'r') as template_file:
         template_content = template_file.read()
@@ -131,25 +131,25 @@ def synthesize_smt2_file(template_path, invalid_lemmas_path, new_lemmas_path, go
     with open(goals_path, 'r') as goals_file:
         goals_content = goals_file.read()
     
-    # 替换模板中的占位符
+    # Replace the placeholders in the template
     synthesized_content = template_content.replace("{new_lemmas}", new_lemmas_content)
     synthesized_content = synthesized_content.replace("{invalid_lemmas}", invalid_lemmas_content)
     synthesized_content = synthesized_content.replace("{goals}", goals_content)
     
-    # 写入合成后的内容到输出文件
+    # Write the synthesized content to the output file
     with open(output_path, 'w') as output_file:
         output_file.write(synthesized_content)
 
 if __name__ == "__main__":
-    input_folder = "testcases/nosg"  # 输入文件夹路径
-    output_folder = "fwzProcessed"  # 输出文件夹路径
+    input_folder = "testcases/nosg"  # path to the input folder
+    output_folder = "fwzProcessed"  # path to the output folder
     
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     
     process_files_in_folder(input_folder, output_folder)
     
-    # # 示例：如何使用模板文件合成一个新的smt2文件
+    # # Example: how to synthesize a new smt2 file using the template file
     # example_subfolder = os.path.join(output_folder, "nichomachus-goal2")
     # if os.path.exists(example_subfolder):
     #     template_path = os.path.join(example_subfolder, "template")

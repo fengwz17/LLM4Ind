@@ -6,27 +6,27 @@ import signal
 import psutil
 from env_config import setup_environment
 
-# 获取配置
+# Load the configuration
 config = setup_environment()
 
 def run_cvc_solver_with_timeout(smt2_path, timeout=60):
     """
-    使用多种CVC5/CVC4配置并行验证SMT2文件，返回第一个成功的结果
+    Verify an SMT2 file using multiple CVC5/CVC4 configurations in parallel and return the first successful result.
     
     Args:
-        smt2_path (str): SMT2文件路径
-        timeout (int): 超时时间（秒），默认60秒
+        smt2_path (str): path to the SMT2 file
+        timeout (int): timeout in seconds, default 60
         
     Returns:
-        bool: 验证成功返回True，失败或超时返回False
+        bool: True if verification succeeds; False on failure or timeout
     """
-    # 从配置中获取CVC5和CVC4可执行文件路径
+    # Read the CVC5 and CVC4 executable paths from the configuration
     cvc4_binary = config['CVC4_BINARY']
     cvc5_binary = config['CVC5_BINARY']
     
-    # 定义所有验证策略配置，包含策略类型和选项
+    # Define the configurations for all verification strategies, including the strategy type and options
     strategies = {
-        # CVC5策略
+        # CVC5 strategies
         'cvc5_simple': {
             'binary': cvc5_binary,
             'options': ["--full-saturate-quant"],
@@ -42,7 +42,7 @@ def run_cvc_solver_with_timeout(smt2_path, timeout=60):
             'options': ["--full-saturate-quant", "--quant-ind", "--conjecture-gen", "--no-e-matching"],
             'type': 'CVC5'
         },
-        # CVC4策略
+        # CVC4 strategies
         'cvc4_default': {
             'binary': cvc4_binary,
             'options': ["--quant-ind", "--quant-cf", "--conjecture-gen", "--full-saturate-quant", "--lang=smt2.6"],
@@ -50,7 +50,7 @@ def run_cvc_solver_with_timeout(smt2_path, timeout=60):
         }
     }
     
-    # 启动所有策略的并行进程
+    # Start parallel processes for all strategies
     processes = {}
     try:
         for strategy_name, strategy_config in strategies.items():
@@ -60,121 +60,121 @@ def run_cvc_solver_with_timeout(smt2_path, timeout=60):
             
             command = [binary] + options + [smt2_path]
             try:
-                # 使用进程组来管理子进程，便于清理
+                # Use a process group to manage the child process for easy cleanup
                 proc = subprocess.Popen(
                     command, 
                     stdout=subprocess.PIPE, 
                     stderr=subprocess.PIPE, 
                     text=True,
-                    preexec_fn=os.setsid  # 创建新的进程组
+                    preexec_fn=os.setsid  # create a new process group
                 )
                 processes[strategy_name] = proc
-                logging.debug(f"启动{strategy_type}进程: {strategy_name} (PID: {proc.pid})")
+                logging.debug(f"Started {strategy_type} process: {strategy_name} (PID: {proc.pid})")
             except FileNotFoundError:
-                logging.error(f"{strategy_type}可执行文件未找到: {binary}")
+                logging.error(f"{strategy_type} executable not found: {binary}")
                 continue
             except Exception as e:
-                logging.error(f"启动{strategy_name}进程失败: {e}")
+                logging.error(f"Failed to start {strategy_name} process: {e}")
                 continue
         
         if not processes:
-            logging.error("没有成功启动任何CVC5/CVC4进程")
+            logging.error("Failed to start any CVC5/CVC4 process")
             return False
         
-        # 监控进程执行
+        # Monitor process execution
         start_time = time.time()
         completed_processes = set()
         
         while time.time() - start_time < timeout:
-            # 检查每个进程的状态
+            # Check the status of each process
             for strategy_name, proc in processes.items():
                 if strategy_name in completed_processes:
                     continue
                     
-                if proc.poll() is not None:  # 进程已完成
+                if proc.poll() is not None:  # process has finished
                     completed_processes.add(strategy_name)
                     
                     try:
                         stdout, stderr = proc.communicate(timeout=1)
                         
                         if proc.returncode == 0 and 'unsat' in stdout:
-                            # 获取策略类型用于日志
+                            # Get the strategy type for logging
                             strategy_type = strategies[strategy_name]['type']
-                            logging.info(f"{strategy_type}验证成功: unsat (策略: {strategy_name})")
-                            # 清理其他进程并返回成功
+                            logging.info(f"{strategy_type} verification succeeded: unsat (strategy: {strategy_name})")
+                            # Clean up the other processes and return success
                             _cleanup_processes(processes, exclude=strategy_name)
                             return True
                         else:
-                            # 记录失败信息但继续等待其他进程
+                            # Log the failure information but keep waiting for other processes
                             if stderr.strip():
-                                logging.debug(f"策略{strategy_name}失败: {stderr.strip()}")
+                                logging.debug(f"Strategy {strategy_name} failed: {stderr.strip()}")
                             else:
-                                logging.debug(f"策略{strategy_name}未返回unsat结果")
+                                logging.debug(f"Strategy {strategy_name} did not return an unsat result")
                                 
                     except subprocess.TimeoutExpired:
-                        logging.warning(f"获取{strategy_name}进程输出超时")
+                        logging.warning(f"Timed out getting output from {strategy_name} process")
                         proc.kill()
                         completed_processes.add(strategy_name)
                     except Exception as e:
-                        logging.error(f"处理{strategy_name}进程结果时出错: {e}")
+                        logging.error(f"Error processing the result of {strategy_name}: {e}")
                         completed_processes.add(strategy_name)
             
-            # 如果所有进程都完成了，退出循环
+            # Exit the loop if all processes have completed
             if len(completed_processes) == len(processes):
                 break
                 
-            time.sleep(0.05)  # 减少CPU占用的轮询间隔
+            time.sleep(0.05)  # polling interval to reduce CPU usage
         
-        # 超时或所有进程都失败
-        logging.warning(f"CVC5/CVC4验证超时或失败 (耗时: {time.time() - start_time:.2f}秒)")
+        # Timeout, or all processes failed
+        logging.warning(f"CVC5/CVC4 verification timed out or failed (elapsed: {time.time() - start_time:.2f}s)")
         return False
         
     finally:
-        # 确保清理所有进程
+        # Make sure all processes are cleaned up
         _cleanup_processes(processes)
 
 
 def _cleanup_processes(processes, exclude=None):
     """
-    清理进程字典中的所有进程，包括其子进程
+    Clean up all processes in the process dictionary, including their child processes.
     
     Args:
-        processes (dict): 进程字典
-        exclude (str): 要排除的进程名称
+        processes (dict): process dictionary
+        exclude (str): name of the process to exclude
     """
     for strategy_name, proc in processes.items():
         if exclude and strategy_name == exclude:
             continue
             
-        if proc.poll() is None:  # 进程仍在运行
+        if proc.poll() is None:  # the process is still running
             try:
-                # 首先尝试优雅地终止进程组
+                # First, try to gracefully terminate the process group
                 try:
                     os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                    logging.debug(f"发送SIGTERM到{strategy_name}进程组 (PGID: {os.getpgid(proc.pid)})")
+                    logging.debug(f"Sent SIGTERM to {strategy_name} process group (PGID: {os.getpgid(proc.pid)})")
                 except (OSError, ProcessLookupError):
-                    # 如果进程组不存在，直接终止进程
+                    # If the process group does not exist, terminate the process directly
                     proc.terminate()
-                    logging.debug(f"直接终止{strategy_name}进程 (PID: {proc.pid})")
+                    logging.debug(f"Terminated {strategy_name} process directly (PID: {proc.pid})")
                 
-                # 给进程一些时间优雅退出
+                # Give the process some time to exit gracefully
                 try:
                     proc.wait(timeout=3)
-                    logging.debug(f"已优雅终止{strategy_name}进程")
+                    logging.debug(f"{strategy_name} process terminated gracefully")
                 except subprocess.TimeoutExpired:
-                    # 强制终止进程组
+                    # Forcefully kill the process group
                     try:
                         os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                        logging.debug(f"强制终止{strategy_name}进程组")
+                        logging.debug(f"Forcefully killed {strategy_name} process group")
                     except (OSError, ProcessLookupError):
-                        # 如果进程组不存在，直接杀死进程
+                        # If the process group does not exist, kill the process directly
                         proc.kill()
-                        logging.debug(f"强制终止{strategy_name}进程")
+                        logging.debug(f"Forcefully killed {strategy_name} process")
                     proc.wait()
                     
             except Exception as e:
-                logging.error(f"终止{strategy_name}进程时出错: {e}")
-                # 最后的清理尝试：使用psutil强制清理
+                logging.error(f"Error terminating {strategy_name} process: {e}")
+                # Last-resort cleanup attempt: forcefully clean up with psutil
                 try:
                     if psutil.pid_exists(proc.pid):
                         parent = psutil.Process(proc.pid)
@@ -185,6 +185,6 @@ def _cleanup_processes(processes, exclude=None):
                             except psutil.NoSuchProcess:
                                 pass
                         parent.kill()
-                        logging.debug(f"使用psutil强制清理{strategy_name}进程及其子进程")
+                        logging.debug(f"Forcefully cleaned up {strategy_name} process and its children via psutil")
                 except Exception as cleanup_error:
-                    logging.error(f"使用psutil清理{strategy_name}进程失败: {cleanup_error}")
+                    logging.error(f"Failed to clean up {strategy_name} process via psutil: {cleanup_error}")

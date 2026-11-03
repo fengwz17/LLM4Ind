@@ -4,39 +4,39 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 def setup_environment():
-    """环境变量和代理配置函数"""
-    # 加载.env文件
+    """Environment variable and proxy configuration"""
+    # Load the .env file
     load_dotenv()
     
-    # 统一加载所有需要的环境变量
+    # Load all required environment variables in one place
     openai_api_key = os.getenv('OPENAI_API_KEY')
     deepseek_api_key = os.getenv('DEEPSEEK_API_KEY')
     qwen_api_key = os.getenv('QWEN_API_KEY')
     gemini_api_key = os.getenv('GEMINI_API_KEY')
     http_proxy = os.getenv('HTTP_PROXY')
     https_proxy = os.getenv('HTTPS_PROXY')
-    model_type = os.getenv('MODEL_TYPE', 'gpt-4o')  # 默认为 gpt-4o
-    cvc5_binary = os.getenv('CVC5_BINARY', './cvc/cvc5-Linux-x86_64-static/bin/cvc5')  # CVC5二进制文件路径
-    cvc4_binary = os.getenv('CVC4_BINARY', './cvc/cvc4_binary/cvc4-1.6-x86_64-linux-opt')  # CVC4二进制文件路径
-    vampire_binary = os.getenv('VAMPIRE_BINARY', './vampire/vampire')  # Vampire二进制文件路径
-    max_attempts_per_prompt = int(os.getenv('MAX_ATTEMPTS_PER_PROMPT', '3'))  # 每个prompt策略的最大尝试次数
-    default_cvc_timeout = int(os.getenv('DEFAULT_CVC_TIMEOUT', '60'))  # 默认CVC5超时时间(初始验证检查)
-    retry_cvc_timeout = int(os.getenv('RETRY_CVC_TIMEOUT', '100'))  # 重试CVC5超时时间(原目标提高时间限制的超时)
-    combined_cvc_timeout = int(os.getenv('COMBINED_CVC_TIMEOUT', '60'))  # 带引理的CVC5超时时间
-    max_recursion_depth = int(os.getenv('MAX_RECURSION_DEPTH', '3'))  # 最大递归深度限制
-    task_timeout = int(os.getenv('TASK_TIMEOUT', '1200'))  # 单个任务的超时时间（秒）
-    max_parallel_tasks = int(os.getenv('MAX_PARALLEL_TASKS', '20'))  # 最大并行任务数
+    model_type = os.getenv('MODEL_TYPE', 'gpt-4o')  # defaults to gpt-4o
+    cvc5_binary = os.getenv('CVC5_BINARY', './cvc/cvc5-Linux-x86_64-static/bin/cvc5')  # path to the CVC5 binary
+    cvc4_binary = os.getenv('CVC4_BINARY', './cvc/cvc4_binary/cvc4-1.6-x86_64-linux-opt')  # path to the CVC4 binary
+    vampire_binary = os.getenv('VAMPIRE_BINARY', './vampire/vampire')  # path to the Vampire binary
+    max_attempts_per_prompt = int(os.getenv('MAX_ATTEMPTS_PER_PROMPT', '3'))  # maximum number of attempts per prompt strategy
+    default_cvc_timeout = int(os.getenv('DEFAULT_CVC_TIMEOUT', '60'))  # default CVC5 timeout (initial verification check)
+    retry_cvc_timeout = int(os.getenv('RETRY_CVC_TIMEOUT', '100'))  # retry CVC5 timeout (extended timeout when re-verifying the original goal)
+    combined_cvc_timeout = int(os.getenv('COMBINED_CVC_TIMEOUT', '60'))  # CVC5 timeout with lemmas
+    max_recursion_depth = int(os.getenv('MAX_RECURSION_DEPTH', '3'))  # maximum recursion depth
+    task_timeout = int(os.getenv('TASK_TIMEOUT', '1200'))  # timeout for a single task (seconds)
+    max_parallel_tasks = int(os.getenv('MAX_PARALLEL_TASKS', '20'))  # maximum number of parallel tasks
 
-    # 代理配置
+    # Proxy configuration
     if http_proxy and https_proxy:
         os.environ['http_proxy'] = http_proxy
         os.environ['https_proxy'] = https_proxy
-        logging.info("代理已启用：%s", http_proxy)
+        logging.info("Proxy enabled: %s", http_proxy)
     else:
-        logging.info("没有找到代理配置，跳过代理设置。")
-    # logging.info("跳过代理设置。")
+        logging.info("No proxy configuration found; skipping proxy setup.")
+    # logging.info("Skipping proxy setup.")
 
-    # 检查必需的 API 密钥是否存在
+    # Check that the required API keys are present
     if not openai_api_key:
         raise ValueError("OPENAI_API_KEY is not set in .env file.")
     if model_type == 'deepseek' and not deepseek_api_key:
@@ -65,44 +65,44 @@ def setup_environment():
     }
 
 def setup_model(config):
-    """根据配置初始化模型"""
+    """Initialize the model based on the configuration"""
     if config['MODEL_TYPE'] == 'deepseek':
         llm = ChatOpenAI(
             model='deepseek-chat',
             openai_api_key=config['DEEPSEEK_API_KEY'],
             openai_api_base='https://api.deepseek.com',
-            temperature=0.9,  # 设置 temperature 为 0.9，增加多样性
-            top_p=0.9  # 设置 top_p 为 0.9，增加创意
+            temperature=0.9,  # set temperature to 0.9 to increase diversity
+            top_p=0.9  # set top_p to 0.9 to increase creativity
             # max_tokens=1024
         )
-        logging.info("使用 DeepSeek-chat 模型进行推理")
+        logging.info("Using the DeepSeek-chat model for inference")
     elif config['MODEL_TYPE'] == 'qwen':
         llm = ChatOpenAI(
             model='qwen/qwen3-235b-a22b-2507',
             openai_api_key=config['QWEN_API_KEY'],
             openai_api_base='https://openrouter.ai/api/v1',
-            temperature=0.9,  # 设置 temperature 为 0.9，增加多样性
-            top_p=0.9  # 设置 top_p 为 0.9，增加创意
+            temperature=0.9,  # set temperature to 0.9 to increase diversity
+            top_p=0.9  # set top_p to 0.9 to increase creativity
         )
-        logging.info("使用 Qwen 模型进行推理")
+        logging.info("Using the Qwen model for inference")
     elif config['MODEL_TYPE'] == 'gemini':
         llm = ChatOpenAI(
             model='google/gemini-2.5-flash',
             openai_api_key=config['GEMINI_API_KEY'],
             openai_api_base='https://openrouter.ai/api/v1',
-            temperature=0.9,  # 设置 temperature 为 0.9，增加多样性
-            top_p=0.9  # 设置 top_p 为 0.9，增加创意
+            temperature=0.9,  # set temperature to 0.9 to increase diversity
+            top_p=0.9  # set top_p to 0.9 to increase creativity
         )
-        logging.info("使用 Gemini 模型进行推理")
+        logging.info("Using the Gemini model for inference")
     else:
         llm = ChatOpenAI(
-            model='openai/gpt-5', # 'openai/gpt-4o-2024-11-20', 
-            openai_api_key=config['OPENAI_API_KEY'], 
+            model='openai/gpt-5', # 'openai/gpt-4o-2024-11-20',
+            openai_api_key=config['OPENAI_API_KEY'],
             openai_api_base='https://openrouter.ai/api/v1',
-            temperature=0.9,  # 设置 temperature 为 0.9，增加多样性
-            top_p=0.9  # 设置 top_p 为 0.9，增加创意
+            temperature=0.9,  # set temperature to 0.9 to increase diversity
+            top_p=0.9  # set top_p to 0.9 to increase creativity
             # temperature=0.7
         )
-        logging.info("使用 GPT-5 模型进行推理.")
+        logging.info("Using the GPT-5 model for inference.")
     
     return llm
